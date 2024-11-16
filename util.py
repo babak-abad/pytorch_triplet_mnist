@@ -1,3 +1,4 @@
+import glob
 import os
 import random
 
@@ -11,47 +12,88 @@ from torch.optim import Adam, SGD
 from matplotlib import pyplot as plt
 import torchvision
 
+class Categ():
+    def __init__(self):
+        self._name = ''
+
 
 class MNIST_DS(torch.utils.data.Dataset):
     def __init__(self, dir):
-        self._dir = dir
-        self._classes = os.listdir(dir)
+        self._ds_dir = dir
+        self._samples = [] # {class_name, [sample_1, sample_2, ...]}
+
+        dirs = next(os.walk(dir))[1]
+
+        os.listdir()
+
+        pattern = os.path.join(dir, '*', '*.bmp')
+        pathes = glob.glob(pattern)
+
+        p = pathes[0]
+        p = os.path.relpath(p, dir)
+
+        for p in pathes:
+            parts = p.split(os.path.sep)
+            fn = parts[-1]
+            parrent = parts[-2]
+            sample = (parrent, fn)
+            self._samples.append(sample)
+
+
+    def _list2dic(self, ls):
+        dic = {}
+        for p in ls:
+            parts = p.split(os.path.sep)
+            fn = parts[-1]
+            parrent = parts[-2]
+            if not (parrent in dic):
+                dic[parrent] = []
+            dic[parrent].append(fn)
+
+        return dic
 
     def __len__(self):
-        return len(self._classes)
+        return len(self._samples)
 
+    def _get_class(self, abs_path_to_file: str) -> str:
+        return abs_path_to_file.split(os.path.sep)[-1]
+
+    def _select_random_file(self, path_to_dir: str) -> str:
+        return ''
     def _convert_idx_to_path(self, idx):
         '''
         converts an int number to dir path of a class
         :param idx:
         :return:
         '''
-        return os.path.join(self._dir, str(idx))
+        return os.path.join(self._ds_dir, str(idx))
 
     def __getitem__(self, idx):
-        dir1 = self._convert_idx_to_path(idx)
-        sub_dirs1 = os.listdir(dir1)
+        query_class = self._samples[idx][0]
+        query_path = os.path.join(self._ds_dir, self._samples[idx][0], self._samples[idx][1])
 
-        r = random.randint(0, len(sub_dirs1) - 1)
-        query = os.path.join(dir1, sub_dirs1[r])
+        # choose a positive sample from
+        dirs = os.listdir(os.path.join(self._ds_dir, self._samples[idx][0]))
+        positive_path = os.path.join(self._ds_dir, self._samples[idx][0], dirs[random.randint(0, len(dirs)-1)])
 
-        r = random.randint(0, len(sub_dirs1) - 1)
-        pos = os.path.join(dir1, sub_dirs1[r])
-
-        r = random.randint(0, self.__len__() - 1)
         # we choose random dir index until it is unequal to query
         # (otherwise we have chosen and object of same class as negative sample)
-        while r == idx:
+        r = random.randint(0, len(self._samples)-1)
+        negative_class = self._samples[r]
+        while negative_class == query_class:
             r = random.randint(0, self.__len__() - 1)
+            negative_class = self._samples[r]
 
-        dir2 = self._convert_idx_to_path(r)
-        sub_dirs2 = os.listdir(dir2)
-        r = random.randint(0, len(sub_dirs2) - 1)
-        neg = os.path.join(dir2, sub_dirs2[r])
+        negative_path = os.path.join(self._ds_dir, self._samples[r][0], self._samples[r][1])
+        # print(os.path.exists(query_path))
+        # cv2.imshow('a', cv2.resize(cv2.imread(negative_path, cv2.IMREAD_GRAYSCALE), (100, 100)))
+        # cv2.moveWindow('a', 100, 100)
+        # cv2.waitKey()
+        q = cv2.imread(query_path, cv2.IMREAD_GRAYSCALE).astype('double')
+        p = cv2.imread(positive_path, cv2.IMREAD_GRAYSCALE).astype('double')
+        n = cv2.imread(negative_path, cv2.IMREAD_GRAYSCALE).astype('double')
 
-        q = cv2.imread(query, cv2.IMREAD_GRAYSCALE).astype('double')
-        p = cv2.imread(pos, cv2.IMREAD_GRAYSCALE).astype('double')
-        n = cv2.imread(neg, cv2.IMREAD_GRAYSCALE).astype('double')
+
 
         q = torch.from_numpy(q).unsqueeze(0)
         p = torch.from_numpy(p).unsqueeze(0)
