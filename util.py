@@ -11,6 +11,7 @@ from torch import nn
 from torch.optim import Adam, SGD
 from matplotlib import pyplot as plt
 import torchvision
+from tqdm import tqdm
 
 class Categ():
     def __init__(self):
@@ -191,14 +192,17 @@ def train_triplet(
     for e in range(0, n_epoch):
         mdl.train()
         train_loss = 0.0
-        for _, (q, p, n) in enumerate(train_dataloader):
+
+        dt = enumerate(train_dataloader)
+        for t in tqdm(range(len(train_dataloader)), desc='Epoch' + str(e+1)):
+            i, (q, p, n) = next(dt)
             # opt.zero_grad()
             # pred = mdl(inp)
             # loss = criterion(pred, out)
             # loss.backward()
             # opt.step()
             # train_loss += loss.item()
-
+            # print(i)
             opt.zero_grad()
             q = q.float()
             p = p.float()
